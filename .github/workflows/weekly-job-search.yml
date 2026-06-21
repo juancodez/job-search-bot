@@ -1,0 +1,39 @@
+name: Weekly Product Designer Job Search
+
+on:
+  schedule:
+    - cron: "0 10 * * 1"  # Every Monday 10:00 AM UTC
+  workflow_dispatch:       # Manual trigger for testing
+
+permissions:
+  issues: write
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run job search
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/search_jobs.py
+
+      - name: Create job-search label if missing
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "job-search" --color "0075ca" --description "Auto job search results" --repo ${{ github.repository }} 2>/dev/null || true
