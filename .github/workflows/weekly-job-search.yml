@@ -3,10 +3,11 @@ name: Weekly Product Designer Job Search
 on:
   schedule:
     - cron: "0 10 * * 1"  # Every Monday 10:00 AM UTC
-  workflow_dispatch:       # Manual trigger for testing
+  workflow_dispatch:
 
 permissions:
   issues: write
+  contents: write
 
 jobs:
   search:
@@ -24,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
+      - name: Create job-search label if missing
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "job-search" --color "0075ca" --description "Auto job search results" --repo ${{ github.repository }} 2>/dev/null || true
+
       - name: Run job search
         env:
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
@@ -32,8 +39,10 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python scripts/search_jobs.py
 
-      - name: Create job-search label if missing
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit data/latest.json
         run: |
-          gh label create "job-search" --color "0075ca" --description "Auto job search results" --repo ${{ github.repository }} 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git diff --staged --quiet || git commit -m "chore: update job data $(date +%Y-%m-%d)"
+          git push
